@@ -1,0 +1,228 @@
+/*
+組合語言期末專題
+主題: 字串加解密+進位制轉換
+醫資三 410540164 黎芷妤
+*/
+#define _CRT_SECURE_NO_WARNINGS //忽略scanf_s的警告訊息
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <iostream>
+
+/*獲取使用者輸入的shift值，用於加密解密*/
+int getShiftValue() {
+    char shiftValue[5]; // 最多接受4位數字
+    int shift;
+
+    printf("\n輸入你要加密/解密的數值:(索引值改變) ");
+    scanf_s("%d", &shift);
+    return shift;
+}
+
+/*加密算法:
+每個字符單獨加密。
+由使用者輸入shift值，利用ASCII碼進行計算*/
+void caesarEncrypt(char* input, char* output, int shift) {
+    int i = 0;
+    while (input[i] != '\0') { //對字串第i個字進行加密
+        output[i] = ((input[i] - 32 + shift + 95) % 95) + 32;  // 在 32 到 126 的範圍內循環
+        i++;
+    }
+    output[i] = '\0';  // 在密文結尾添加結束符
+}
+
+/*解密算法:
+每個字串單獨解密
+由使用者輸入shift值，利用ASCII進行計算*/
+void caesarDecrypt(char* input, char* output, int shift) {
+    int i = 0;
+    while (input[i] != '\0') {  //對字串第i個字進行解密
+        output[i] = ((input[i] - 32 - shift + 95) % 95) + 32;  // 在 32 到 126 的範圍內循環
+        i++;
+    }
+    output[i] = '\0';  // 在明文結尾添加結束符
+}
+
+/*顯示每個字符的ASCII碼*/
+void displayAsciiValues(char* text) {
+    printf("\n\nASCII的索引值:\n");
+    for (int i = 0; text[i] != '\0'; i++) {
+        printf("%c: %d  ", text[i], text[i]); //%c ->字符,%d ->十進制整數
+    }
+}
+
+/*進制轉換結果輸出:二進制、八進制、十進制*/
+int displayBinary(int decimal) {
+    //顯示十進制轉換為二進制的結果
+    int binary = 0;
+    std::cout << "binary: ";
+    for (int i = 31; i >= 0; i--) {
+        int bit = (decimal >> i) & 1;
+        binary = binary * 10 + bit;
+    }
+    std::cout << binary << std::endl;
+
+    return 0;
+
+}
+
+int displayOctal(int decimal) {
+    // 顯示十進制轉換為八進制的結果
+    int octal = 0;
+    std::cout << "Octal:";
+
+    // 運用位運算將十進制轉換為八進制
+    int mask = 07;  // 八進制中的掩碼
+    int shift = 3;  // 每次右移三位
+
+    for (int i = 30; i >= 0; i -= 3) {
+        int octalDigit = (decimal >> i) & mask;
+        octal = octal * 10 + octalDigit;
+    }
+
+    std::cout << octal << std::endl;
+
+    return 0;
+}
+
+void displayDecimal(int decimal) {
+    //顯示二進制轉換為十進制的結果
+    printf("\nDecimal: %d\n", decimal);
+}
+
+/*十進制轉換結果顯示 -> 二進制、八進制*/
+void decimalConverter(int decimal) {
+    displayDecimal(decimal);    //十進制結果
+    displayBinary(decimal); //二進制結果
+    displayOctal(decimal);  //八進制結果
+}
+
+/*二進制轉換結果顯示 -> 十進制、八進制:
+ 先由二進制轉制十進制 再以十進制做轉換*/
+void binaryConverter(int binary) {
+
+    printf("\nBinary: %d\n", binary);
+    int decimal = 0, base = 1;
+
+    // 從二進制轉十進制
+    while (binary > 0) {
+        int num = binary % 10; //取二進制最後一位
+        decimal += num * base; //轉換成十進制
+        binary /= 10; //去掉處理過的
+        base *= 2; //更新
+    }
+
+    displayDecimal(decimal);    //十進制結果
+    displayOctal(decimal);  //八進制結果
+}
+
+int main() {
+    char inputText[256];
+    char encryptedText[256];
+    char decryptedText[256];
+    int shift, choice;
+    size_t len;
+
+    printf("歡迎使用組合語言期末專題之加解密進制大轉換\n");
+
+    do {
+        printf("\n選擇你要進行的操作:\n");
+        printf("1. 加密\n");
+        printf("2. 解密\n");
+        printf("3. 十進制轉換 (Decimal to Binary, and Octal)\n");
+        printf("4. 二進制轉換 (Binary to Decimal, and Octal)\n");
+        printf("5. 離開\n");
+        printf("輸入你的選擇: ");
+        //讀取用戶選擇
+        scanf_s("%d", &choice);
+        getchar();
+
+        //獲取輸入字串的長度
+        len = strlen(inputText);
+        //如果最後一個字符是換行就刪除
+        if (len > 0 && inputText[len - 1] == '\n') {
+            inputText[len - 1] = '\0';
+            len--;
+        }
+
+        //根據用戶選擇做相對應的操作
+        switch (choice) {
+        case 1:
+            printf("\n輸入您要加密的字串:");
+            fgets(inputText, sizeof(inputText), stdin); //獲取欲加密字串
+
+            len = strlen(inputText);
+            if (len > 0 && inputText[len - 1] == '\n') {
+                inputText[len - 1] = '\0';
+                len--;
+            }
+
+            shift = getShiftValue();    //獲取shift值
+
+            printf("\n您輸入的字串: %s\n", inputText);
+
+            //加密
+            caesarEncrypt(inputText, encryptedText, shift);
+            printf("\n加密完成的字串: %s", encryptedText);
+
+            //顯示字符ASCII的值
+            displayAsciiValues(encryptedText);
+            printf("\n");
+            break;
+
+        case 2:
+            printf("\n輸入您要解密的字串: ");
+            fgets(inputText, sizeof(inputText), stdin);//獲取欲解密字串
+
+            len = strlen(inputText);
+            if (len > 0 && inputText[len - 1] == '\n') {
+                inputText[len - 1] = '\0';
+                len--;
+            }
+
+            shift = getShiftValue();
+
+            printf("\n您輸入的字串: %s\n", inputText);
+
+            //解密
+            caesarDecrypt(inputText, decryptedText, shift);
+            printf("\n解密完成的字串: %s", decryptedText);
+
+            //顯示字符ASCII的值
+            displayAsciiValues(decryptedText);
+            printf("\n");
+            break;
+
+        case 3:
+            printf("\n輸入您要轉換的十進制數字: ");
+            int inputDecimal;
+            scanf_s("%d", &inputDecimal);
+            getchar();
+
+            //進制轉換
+            decimalConverter(inputDecimal);
+            break;
+        case 4:
+            printf("\n輸入您要轉換的二進制數字: ");
+            int inputBinary;
+            scanf_s("%d", &inputBinary);
+            getchar();
+
+            //進制轉換
+            binaryConverter(inputBinary);
+            break;
+        case 5:
+            //離開
+            printf("\n竟然要離開我們了~希望有幫助到你呀~掰掰~\n");
+            break;
+
+        default:
+            //無效的選擇
+            printf("\n無效的選擇!請重新選擇\n");
+            break;
+        }
+
+    } while (choice != 5);
+
+    return 0;
+}
