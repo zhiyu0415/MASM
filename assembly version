@@ -1,0 +1,433 @@
+; 組合語言期末專題
+; 主題: 字串加解密+進位制轉換
+; 醫資三   410540164 黎芷妤
+
+INCLUDE Irvine32.inc
+
+.data
+
+inputText       BYTE 256 DUP(?)    ; 256 字元的輸入文字
+;encryptedText  BYTE 256 DUP(?)    ; 加密後的文字
+decryptedText   BYTE 256 DUP(?)    ; 解密後的文字
+shift           BYTE 0             ; 加密值
+
+; inputDecimal    DWORD ?          ; 輸入轉換的十進制 (但在組語中可以不用實際用到)
+; inputBinary     DWORD ?          ; 輸入轉換的二進制 (但在組語中可以不用實際用到)
+; choice          DWORD 0          ; 選擇操作哪個menu的整數 (但在組語中可以不用實際用到)
+
+welcomeMsg BYTE "歡迎使用組合語言期末專題之加解密進制大轉換", 0Ah, 0
+menuMsg BYTE 0Ah, "選擇你要進行的操作:", 0Ah, 0
+menu1 BYTE "1. 加密", 0Ah, 0
+menu2 BYTE "2. 解密", 0Ah, 0
+menu3 BYTE "3. 十進制轉換 (Decimal to Binary, and Octal)", 0Ah, 0
+menu4 BYTE "4. 二進制轉換 (Binary to Decimal, and Octal)", 0Ah, 0
+menu5 BYTE "5. 離開", 0Ah, 0
+menuMsg2 BYTE "輸入你的選擇: ", 0
+case1msg       BYTE 0Ah, "輸入您要加密的字串: ", 0
+case1outmsg1   BYTE 0Ah, "您輸入的字串: ", 0
+case1outmsg2   BYTE 0Ah, "加密完成的字串: ", 0
+case2msg       BYTE 0Ah, "輸入您要解密的字串:", 0
+; case2outmsg1   BYTE 0Ah, "您輸入的字串: ", 0                ; 此處用不到，因為已設定過同樣的句子
+case2outmsg2   BYTE 0Ah, "解密完成的字串: ", 0
+case3msg       BYTE 0Ah, "輸入您要轉換的十進制數字: ", 0
+case4msg       BYTE 0Ah, "輸入您要轉換的二進制數字: ", 0
+case5msg       BYTE 0Ah, "竟然要離開我們了~希望有幫助到你呀~掰掰~", 0Ah, 0
+DEFAULTmsg     BYTE 0Ah, "無效的選擇!請重新選擇", 0Ah, 0
+
+.code
+
+main_asm proc				      ; declare main procedure
+	mov EDX, OFFSET welcomeMsg
+    call WriteString
+
+    WHILE_LOOP: 
+        mov EDX, OFFSET menuMsg
+        call WriteString
+        mov EDX, OFFSET menu1
+        call WriteString
+        mov EDX, OFFSET menu2
+        call WriteString
+        mov EDX, OFFSET menu3
+        call WriteString
+        mov EDX, OFFSET menu4
+        call WriteString
+        mov EDX, OFFSET menu5
+        call WriteString
+        mov EDX, OFFSET menuMsg2
+        call WriteString
+        call ReadInt                ; 輸入選擇 choice，會存在 eax
+      ; mov choice, eax             ; 不需再存進 choice，等等 eax 會接續使用，可以直接判斷
+
+        ; switch 語句               ; 根據用戶選擇做相對應的操作
+      ; mov eax, choice             ; 輸入完後已經存在於 eax 了，可以直接判斷，因此不用從 choice 取出來
+        cmp eax, 1
+        je CASE1
+        cmp eax, 2
+        je CASE2
+        cmp eax, 3
+        je CASE3
+        cmp eax, 4
+        je CASE4
+        cmp eax, 5
+        je CASE5
+        jmp DEFAULT
+
+    CASE1:
+        mov EDX, OFFSET case1msg    ; 讀取原始字串
+        call WriteString
+        mov ecx,32
+        mov EDX, OFFSET inputText
+        call ReadString
+
+        mov EDX, OFFSET case1outmsg1
+        call WriteString
+        mov EDX, OFFSET inputText 
+        call WriteString      
+        call crlf
+
+        call getShiftValue          ; 調用副程式 getShiftValue 來獲取 shift 數值
+        
+        ; 加密
+        call ceasarEncrypt
+        mov EDX, OFFSET case1outmsg2
+        call WriteString
+        mov EDX, OFFSET inputText
+        call WriteString
+        call crlf
+        call crlf
+        
+        ; 顯示字符ASCII的值
+        call displayAsciiValues
+        call crlf
+
+        jmp WHILE_LOOP
+
+    CASE2:
+        mov EDX, OFFSET case2msg    ; 讀取原始字串
+        call WriteString
+        mov ecx,32
+        mov EDX, OFFSET inputText
+        call ReadString
+
+        mov EDX, OFFSET case1outmsg1
+        call WriteString
+        mov EDX, OFFSET inputText 
+        call WriteString      
+        call crlf
+
+        call getShiftValue          ; 調用副程式 getShiftValue 來獲取 shift 數值
+        
+        ; 加密
+        call ceasarDecrypt
+        mov EDX, OFFSET case2outmsg2
+        call WriteString
+        mov EDX, OFFSET inputText
+        call WriteString
+        call crlf
+        call crlf
+        
+        ; 顯示字符ASCII的值
+        call displayAsciiValues
+        call crlf
+
+        jmp WHILE_LOOP
+
+    CASE3:
+        mov EDX, OFFSET case3msg
+        call WriteString
+        call ReadInt                ; 輸入數字
+      ; mov inputDecimal, eax       ; 將數字存到 inputDecimal (十進制數字) (實際上不需要這一步，因為 eax 會接續使用)
+        call decimalConverter       ; 調用副程式 decimalConverter
+        jmp WHILE_LOOP
+
+    CASE4:
+        mov EDX, OFFSET case4msg
+        call WriteString
+        call ReadInt                ; 輸入數字
+      ; mov inputBinary, eax        ; 將數字存到 inputBinary (二進制數字) (實際上不需要這一步，因為 eax 會接續使用)
+        call binaryConverter        ; 調用副程式 binaryConverter
+        jmp WHILE_LOOP
+
+    CASE5:
+        mov EDX, OFFSET case5msg
+        call WriteString
+        jmp END_PROGRAM
+
+    DEFAULT:                        ; 不正確的選擇
+        mov EDX, OFFSET DEFAULTmsg
+        call WriteString
+        jmp WHILE_LOOP
+
+END_PROGRAM:
+	invoke ExitProcess,0
+
+main_asm ENDP
+
+; --------------------------------------------------------------------
+; /*獲取使用者輸入的shift值，用於加密解密*/
+.data
+getSHIFTmsg BYTE 0Ah, "輸入你要加密/解密的數值:(索引值改變) ", 0
+
+.code
+
+getShiftValue proc				    ; declare getShiftValue procedure
+        mov EDX, OFFSET getSHIFTmsg
+        call WriteString
+        call ReadInt                ; 輸入數字
+        mov shift, al               ; 將數字存到 shift
+
+        ret                         ; 返回
+getShiftValue ENDP
+
+; --------------------------------------------------------------------
+; /*加密算法:
+;   每個字符單獨加密。
+;   由使用者輸入shift值，利用ASCII碼進行計算*/
+.data
+tmp_num      BYTE 0            ; 暫時值
+
+.code
+ceasarEncrypt PROC
+    mov esi, 0                       ; 使用 esi (變數 i) 作為索引
+    whileLoop:
+        mov eax, 0
+        ; 迴圈結束條件檢查 ( input[i] != '\0' )
+        mov al, inputText[esi]        ; 載入字串中的一個字元
+        cmp al, 0                     ; 檢查是否為字串結尾, 若是則結束加密
+        je whileDONE                  ; 若為結尾則結束循環
+
+        sub al, 32                    ; 加密 ((input[i] - 32 + 95 + shift) % 95) + 32
+        add al, 95
+        add al, shift
+
+        ;mov tmp_num, al               ; 做 (% 95)
+        ;mov al, tmp_num               ; 將 tmp_num 複製到 eax
+        mov ebx, 95                    ; 將 95 複製到 ebx
+        mov edx, 0                     ; 清零 edx
+        div ebx                        ; 除法操作，結果放在 eax 中，餘數放在 edx 中
+        add edx, 32                    ; 取 %95 餘數 + 32 = ((input[i] - 32 - shift + 95) % 95) + 32
+
+        ;mov tmp_num, dl               ; 取代原始字串
+        mov eax, edx
+        mov inputText[esi], al
+
+        inc esi                       ; 增加索引 (變數 i)
+        jmp whileLoop
+
+    whileDONE:   
+
+    ret                        ; 返回
+ceasarEncrypt ENDP
+
+; --------------------------------------------------------------------
+; /*解密算法:
+; 每個字串單獨解密
+; 由使用者輸入shift值，利用ASCII進行計算*/
+ceasarDecrypt PROC
+    mov esi, 0                       ; 使用 esi (變數 i) 作為索引
+    whileLoop:
+        mov eax, 0
+        ; 迴圈結束條件檢查 ( input[i] != '\0' )
+        mov al, inputText[esi]        ; 載入字串中的一個字元
+        cmp al, 0                     ; 檢查是否為字串結尾, 若是則結束加密
+        je whileDONE                  ; 若為結尾則結束循環
+
+        sub al, 32                    ; 加密 ((input[i] - 32 + 95 - shift) % 95) + 32
+        add al, 95
+        sub al, shift
+
+        ;mov tmp_num, al               ; 做 (% 95)
+        ;mov al, tmp_num               ; 將 tmp_num 複製到 eax
+        mov ebx, 95                    ; 將 95 複製到 ebx
+        mov edx, 0                     ; 清零 edx
+        div ebx                        ; 除法操作，結果放在 eax 中，餘數放在 edx 中
+        add edx, 32                    ; 取 %95 餘數 + 32 = ((input[i] - 32 - shift + 95) % 95) + 32
+
+        ;mov tmp_num, dl               ; 取代原始字串
+        mov eax, edx
+        mov inputText[esi], al
+
+        inc esi                       ; 增加索引 (變數 i)
+        jmp whileLoop
+
+    whileDONE:   
+
+    ret                        ; 返回
+ceasarDecrypt ENDP
+
+; --------------------------------------------------------------------
+; /*顯示每個字符的ASCII碼*/
+.data
+    ascii_msg   BYTE 0Ah, "ASCII的索引值 ", 0
+
+.code
+displayAsciiValues PROC
+    mov esi, 0 ; 使用 esi 作為索引
+    printAscii:
+        mov al, inputText[esi]     ; 載入字串中的一個字元
+        cmp al, 0                  ; 檢查是否為字串結尾, 若是則結束加密
+        je endprintAscii           ; 若為結尾則結束循環
+
+         ;顯示Ascii字元
+        mov al, inputText[esi]
+        call WriteInt
+
+        inc esi                    ; 增加索引
+        jmp printAscii
+
+    endprintAscii:
+    ret                        ; 返回
+displayAsciiValues ENDP
+
+; --------------------------------------------------------------------
+; /*十進制轉換 -> 二進制、八進制*/
+.data
+Decimal    DWORD ?          ; 輸入數字的十進制
+
+.code
+
+decimalConverter proc				; declare decimalConverter procedure
+     ;  mov eax, inputDecimal       ; 接收參數 inputDecimal (實際上不需要，因為 eax 還是 inputDecimal 的值，沒有改變)
+        mov Decimal, eax            ; 將 eax 的值傳入參數 Decimal，以便後續副程式使用
+        call displayDecimal         ; 調用副程式 displayDecimal
+        call displayBinary          ; 調用副程式 displayBinary
+        call displayOctal           ; 調用副程式 displayOctal 
+
+        ret                         ; 返回
+decimalConverter ENDP
+
+; --------------------------------------------------------------------
+; /*二進制轉換與結果顯示 -> 十進制、八進制*/
+.data
+BINARYmsg BYTE 0Ah, "Binary : ", 0
+Binary  DWORD 0          ; 初始值為輸入的二進制數字，後續會用來將該二進制數字轉化為十進制數字
+;base    DWORD 1          ; 用來將輸入的二進制數字轉化為十進制，初始值為 1 (組合語言中我用 ecx 暫存器代替)
+;num     DWORD ?          ; 用來儲存binary % 10 (組合語言中可以不用用到，直接使用暫存器儲存)
+
+.code
+
+binaryConverter proc				; declare binaryConverter procedure
+     ;  mov eax, inputBinary        ; 接收參數 inputBinary (實際上不需要，因為 eax 還是 inputBinary 的值，沒有改變)
+        mov EDX, OFFSET BINARYmsg
+        call WriteString
+        call writeDec               ; 輸出 inputBinary 的值為二進制數字輸出
+        call crlf                   ; 輸出換行
+        
+        ; 開始轉換為十進位
+        mov Decimal, 0              ; 將 Decimal 初始化為 0
+        mov ecx, 1                  ; 用來替代變數 base，初始值為 1 
+        mov Binary, eax             ; 將 eax 值 (輸入進的 inputBinary 值) 存到 Binary 中
+        cmp eax, 0                  ; 比較 eax (此處為 binary 的值) 和 0
+        jg whileLoop                ; 若 binaty > 0，進入 whileLoop
+
+        whileLoop:
+            mov eax, Binary         ; 將 binary 複製到 eax
+            mov ebx, 10             ; 將 10 複製到 ebx
+            mov edx, 0              ; 清零 edx
+            div ebx                 ; 除法操作，結果放在 eax 中，餘數放在 edx 中
+            mov Binary, eax         ; 將 eax 的值存回 binary 中，得新的 binary = binary/10
+            ; 此時 edx 包含 binary % 10 的結果，將值移到變數 num 中，num = binary % 10
+            imul edx, ecx           ; 將 edx (變數 num) * ecx (變數 base)，得新的 edx = num * base
+            mov eax, Decimal        ; 將 Decimal 的值存到 eax 中
+            add eax, edx            ; 將 eax 加上 edx，得新的 eax = Decimal + num * base
+            mov Decimal, eax        ; 將 eax 的值存回 Decimal 中，得新的 Decimal = Decimal + num * base
+            imul ecx, 2             ; 將 ecx 乘以 2，得新的 base = base * 2
+            mov eax, Binary         ; 將 binary 複製到 eax
+            cmp eax, 0              ; 比較 eax (此處為 binary 的值) 和 0
+            jg whileLoop            ; 若 binaty > 0，跳回 whileLoop
+
+        call displayDecimal         ; 調用副程式 displayDecimal
+        call displayOctal           ; 調用副程式 displayOctal
+
+        ret                         ; 返回
+binaryConverter ENDP
+
+; --------------------------------------------------------------------
+; /*十進制轉換結果顯示*/
+.data
+DECIMALmsg BYTE 0Ah, "Decimal : ", 0
+
+.code
+
+displayDecimal proc				    ; declare displayDecimal procedure
+        mov EDX, OFFSET DECIMALmsg
+        call WriteString
+        mov eax, Decimal            ; 將參數 Decimal 的值傳入 eax，以便後續輸出
+        call writeDec               ; 輸出 Decimal 的值
+        call crlf                   ; 輸出換行
+
+        ret                         ; 返回
+displayDecimal ENDP
+
+; --------------------------------------------------------------------
+; /*二進制轉換，與結果顯示*/
+.data
+; BINARYmsg BYTE 0Ah, "Binary : ", 0  ; 前面有設定過了
+
+.code
+
+displayBinary proc				      ; declare displayBinary procedure
+        mov EDX, OFFSET BINARYmsg
+        call WriteString
+
+        ; 開始轉換為二進位
+        mov Binary, 0               ; 轉化完的二進制數字，將 Binary 初始值設為 0
+        mov ecx, 31                 ; 設定迴圈次數
+        
+        forLoop:
+            mov ebx, Binary         ; 將 Binary 的值存到 ebx 中
+            imul ebx, 10            ; 將 Binary * 10
+            mov eax, Decimal        ; 將十進制數字複製到 eax 中
+            shr eax, cl             ; 將 Decimal 值向右移 ecx (=cl) 個位元
+            and eax, 1              ; 檢查 Decimal 值最低位元是否為 1
+            add ebx, eax            ; 將 Binary + eax，這樣單次迴圈就會求得 Binary = Binary * 10 + eax
+            mov Binary, ebx         ; 將 ebx 的值實際存進 Binary 中
+            sub ecx, 1              ; 將迴圈計數器 ecx 的值減掉
+            jge forLoop             ; 迴圈減一，若 ecx >= 0，跳回 forLoop
+
+        mov eax, Binary             ; 將參數 Binary 的值傳入 eax，以便後續輸出
+        call writeDec               ; 輸出 Binary 的值
+        call crlf                   ; 輸出換行
+
+        ret                         ; 返回
+displayBinary ENDP
+
+; --------------------------------------------------------------------
+; /*八進制轉換，與結果顯示*/
+.data
+OCTALmsg BYTE 0Ah, "Octal : ", 0
+Octal   DWORD 0          ; 轉化完的八進制數字，初始值為 0
+mask8   DWORD 07         ; 八進制中的掩碼
+
+.code
+
+displayOctal proc				      ; declare displayOctal procedure
+        mov EDX, OFFSET OCTALmsg
+        call WriteString
+
+        ; 開始轉換為八進位
+        mov Octal, 0                ; 將 Octal 預設為 0
+        mov ecx, 30                 ; 設定迴圈次數
+        
+        forLoop:
+            mov ebx, Octal          ; 將 Octal 的值存到 ebx 中
+            imul ebx, 10            ; 將 Octal * 10
+            mov eax, Decimal        ; 將十進制數字複製到 eax 中
+            shr eax, cl             ; 將 Octal 值向右移 ecx (=cl) 個位元
+            and eax, mask8          ; 檢查 Octal 值最低3位元
+            add ebx, eax            ; 將 Octal + eax，這樣單次迴圈就會求得 Octal = Octal * 10 + eax
+            mov Octal, ebx          ; 將 ebx 的值實際存進 Octal 中
+            sub ecx, 3              ; 此迴圈結束的判斷為 (迴圈計數器 -= 3)，因此 ecx 減 3
+            jge forLoop             ; 迴圈減一，若 ecx >= 0，跳回 forLoop
+
+        mov eax, Octal              ; 將參數 Octal 的值傳入 eax，以便後續輸出
+        call writeDec               ; 輸出 Octal 的值
+        call crlf                   ; 輸出換行
+
+        ret                         ; 返回
+displayOctal ENDP
+
+; --------------------------------------------------------------------
+
+end main_asm                          ;  End the program
+
